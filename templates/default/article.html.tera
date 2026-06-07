@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if meta and meta.title %}{{ meta.title | safe_html }}{% else %}Document{% endif %}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: "Liberation Serif", Georgia, serif;
+      font-size: 1rem; line-height: 1.7;
+      max-width: 780px; margin: 0 auto; padding: 2rem 1.5rem;
+      color: #222;
+    }
+    h1, h2, h3, h4, h5, h6 { font-family: "Liberation Sans", Arial, sans-serif; color: #1a1a2e; margin: 1.5em 0 0.4em; }
+    h1 { font-size: 2rem; border-bottom: 2px solid #e0e0e0; padding-bottom: 0.3em; }
+    h2 { font-size: 1.5rem; border-bottom: 1px solid #ececec; padding-bottom: 0.2em; }
+    h3 { font-size: 1.25rem; }
+    p { margin: 0.8em 0; }
+    a { color: #1565c0; }
+    code { font-family: "Liberation Mono", monospace; background: #f4f4f4; padding: 0.1em 0.35em; border-radius: 3px; font-size: 0.88em; }
+    pre { background: #f8f8f8; border: 1px solid #ddd; border-radius: 4px; padding: 1rem; overflow-x: auto; }
+    pre code { background: none; padding: 0; font-size: 0.85em; }
+    blockquote { border-left: 4px solid #ccc; margin: 1em 0; padding: 0.5em 1em; color: #555; background: #fafafa; }
+    blockquote.note    { border-color: #2196f3; background: #e3f2fd; }
+    blockquote.warning { border-color: #ff9800; background: #fff3e0; }
+    blockquote.tip     { border-color: #4caf50; background: #e8f5e9; }
+    blockquote.caution { border-color: #f44336; background: #fce4ec; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+    th, td { border: 1px solid #ddd; padding: 0.5em 0.75em; text-align: left; }
+    th { background: #f0f0f0; font-weight: 600; }
+    tr:nth-child(even) td { background: #fafafa; }
+    .math-block { font-style: italic; text-align: center; margin: 1em 0; }
+    .math-inline { font-style: italic; }
+    .toc { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 4px; padding: 1em 1.5em; margin-bottom: 2em; }
+    .toc h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0; }
+    .toc ul { margin: 0; padding-left: 1.2em; }
+    .toc li { margin: 0.2em 0; }
+    .toc a { text-decoration: none; color: #333; }
+    .toc a:hover { text-decoration: underline; }
+    .toc .level-2 { margin-left: 1em; }
+    .toc .level-3 { margin-left: 2em; }
+    .tags { margin-bottom: 1.5em; }
+    .tag { display: inline-block; background: #e8eaf6; color: #3f51b5; border-radius: 3px; padding: 0.1em 0.5em; font-size: 0.8em; margin-right: 0.3em; }
+    hr { border: none; border-top: 1px solid #ddd; margin: 2em 0; }
+    img { max-width: 100%; height: auto; }
+    .footnote-def { font-size: 0.85em; color: #555; border-top: 1px solid #eee; margin-top: 2em; padding-top: 0.5em; }
+    sup { font-size: 0.75em; }
+  </style>
+</head>
+<body>
+
+<article>
+  {% if meta %}
+  <header>
+    {% if meta.title %}<h1>{{ meta.title | safe_html }}</h1>{% endif %}
+    {% if meta.date %}<p class="date"><time>{{ meta.date | date_fmt }}</time></p>{% endif %}
+    {% if meta.tags %}
+    <div class="tags">
+      {% for tag in meta.tags %}<span class="tag">{{ tag | safe_html }}</span>{% endfor %}
+    </div>
+    {% endif %}
+  </header>
+  {% endif %}
+
+  {% if toc | length > 1 %}
+  <nav class="toc">
+    <h2>Contents</h2>
+    <ul>
+      {% for entry in toc %}
+      <li class="level-{{ entry.level }}">
+        <a href="#{{ entry.slug }}">{{ entry.text | safe_html }}</a>
+      </li>
+      {% endfor %}
+    </ul>
+  </nav>
+  {% endif %}
+
+  {% for node in body %}
+    {% if node.t == "heading" %}
+      {% set level = node.level %}
+      <h{{ level }} id="{{ node.children | join(sep="", n="text") | default(value="") | slugify }}">
+        {% for child in node.children %}{{ child.text | default(value="") }}{% endfor %}
+      </h{{ level }}>
+
+    {% elif node.t == "paragraph" %}
+      <p>
+        {% for child in node.children %}
+          {% if child.t == "text" %}{{ child.text | safe_html }}
+          {% elif child.t == "strong" %}<strong>{% for c in child.children %}{{ c.text | default(value="") }}{% endfor %}</strong>
+          {% elif child.t == "em" %}<em>{% for c in child.children %}{{ c.text | default(value="") }}{% endfor %}</em>
+          {% elif child.t == "code" %}<code>{{ child.text | safe_html }}</code>
+          {% elif child.t == "link" %}<a href="{{ child.href }}">{% for c in child.children %}{{ c.text | default(value="") }}{% endfor %}</a>
+          {% elif child.t == "image" %}<img src="{{ child.src }}" alt="{{ child.alt | default(value="") }}">
+          {% elif child.t == "math_inline" %}<span class="math-inline" data-math="{{ child.src | safe_html }}">${{ child.src | safe_html }}$</span>
+          {% elif child.t == "hard_break" %}<br>
+          {% elif child.t == "del" %}<del>{% for c in child.children %}{{ c.text | default(value="") }}{% endfor %}</del>
+          {% elif child.t == "sup" %}<sup>{% for c in child.children %}{{ c.text | default(value="") }}{% endfor %}</sup>
+          {% elif child.t == "sub" %}<sub>{% for c in child.children %}{{ c.text | default(value="") }}{% endfor %}</sub>
+          {% elif child.t == "footnote_ref" %}<sup><a href="#fn-{{ child.label }}" id="fnref-{{ child.label }}">[{{ child.label }}]</a></sup>
+          {% else %}{{ child.text | default(value="") | safe_html }}
+          {% endif %}
+        {% endfor %}
+      </p>
+
+    {% elif node.t == "fenced" %}
+      <pre><code class="language-{{ node.name }}">{{ node.raw | safe_html }}</code></pre>
+
+    {% elif node.t == "math_block" %}
+      <p class="math-block" data-math="{{ node.src | safe_html }}">$${{ node.src | safe_html }}$$</p>
+
+    {% elif node.t == "blockquote" %}
+      <blockquote class="{{ node.kind | default(value="") }}">
+        {% for child in node.children %}
+          {% if child.t == "paragraph" %}
+            <p>{% for c in child.children %}{{ c.text | default(value="") }}{% endfor %}</p>
+          {% endif %}
+        {% endfor %}
+      </blockquote>
+
+    {% elif node.t == "list" %}
+      {% if node.ordered %}<ol start="{{ node.start | default(value=1) }}">{% else %}<ul>{% endif %}
+        {% for item in node.items %}
+          <li>
+            {% for child in item.children %}
+              {% if child.t == "paragraph" %}{% for c in child.children %}{{ c.text | default(value="") | safe_html }}{% endfor %}
+              {% elif child.t == "text" %}{{ child.text | default(value="") | safe_html }}
+              {% elif child.t == "strong" %}<strong>{% for c in child.children %}{{ c.text | default(value="") }}{% endfor %}</strong>
+              {% elif child.t == "em" %}<em>{% for c in child.children %}{{ c.text | default(value="") }}{% endfor %}</em>
+              {% elif child.t == "code" %}<code>{{ child.text | default(value="") | safe_html }}</code>
+              {% endif %}
+            {% endfor %}
+          </li>
+        {% endfor %}
+      {% if node.ordered %}</ol>{% else %}</ul>{% endif %}
+
+    {% elif node.t == "table" %}
+      <table>
+        {% if node.headers %}
+        <thead><tr>
+          {% for cell in node.headers %}<th>{% for c in cell.children %}{{ c.text | default(value="") }}{% endfor %}</th>{% endfor %}
+        </tr></thead>
+        {% endif %}
+        <tbody>
+          {% for row in node.rows %}
+          <tr>
+            {% for cell in row %}<td>{% for c in cell.children %}{{ c.text | default(value="") }}{% endfor %}</td>{% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+    {% elif node.t == "hr" %}
+      <hr>
+
+    {% elif node.t == "footnote_def" %}
+      <div class="footnote-def" id="fn-{{ node.label }}">
+        <sup>{{ node.label }}</sup>
+        {% for child in node.children %}
+          {% if child.t == "paragraph" %}<p>{% for c in child.children %}{{ c.text | default(value="") }}{% endfor %}</p>{% endif %}
+        {% endfor %}
+      </div>
+
+    {% endif %}
+  {% endfor %}
+</article>
+
+</body>
+</html>

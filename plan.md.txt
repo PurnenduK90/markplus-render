@@ -1,0 +1,50 @@
+Renderer plan for markplus ecosystem
+
+Problem statement
+-----------------
+Add a renderer library that consumes the AST produced by markplus_core and emits HTML and Typst outputs. The renderer should be flexible so consumers can customize output shapes (IEEE paper, blog, docs site) via templates rather than hard-coded HTML. The renderer must integrate well with existing toolchain (native and optionally wasm), be testable, and supply sane defaults.
+
+Proposed approach
+-----------------
+- Provide a new crate (markplus_render) that depends on markplus_core and exposes renderer APIs.
+- Make rendering template-based: expose a transformation from SiteAsset (schema, meta, ast) into a context object (serde_json::Value / serde::Serialize) that templates can consume.
+- Use Tera as the default templating engine for HTML and Typst templates. Rationale: Tera is mature, supports includes/macros/filters, and templates are plain text so Typst templates are natural too.
+- Keep template rendering native-only by default. Provide a minimal wasm-friendly renderer that converts AST to simple HTML without Tera (pure code), for browsers where adding Tera is expensive or impossible.
+- Provide default templates for: basic article (default), IEEE-like paper, and a small docs page. Allow users to supply a directory of templates or override specific templates at runtime.
+- Expose two high-level APIs:
+  - render_to_string(asset: &SiteAsset, template_name: &str, ctx_opts: RenderOptions) -> Result<String, RenderError>
+  - render_to_file(asset: &SiteAsset, template_name: &str, dest: &Path, ctx_opts: RenderOptions) -> Result<(), RenderError>
+- Implement helpers:
+  - ast_to_template_context(asset: &SiteAsset) -> serde_json::Value (walks AST into serializable shapes convenient for templates)
+  - prelude filters/helpers for Tera (date formatting, slugify, safe_html, include_asset)
+- Tests: unit tests for context conversion, template rendering using in-repo default templates, snapshot tests for HTML and Typst outputs.
+
+Notes and considerations
+------------------------
+- Tera is native-only; adding it for wasm would bloat the binary. Keep wasm renderer lightweight and optional.
+- Templates must be fully-deterministic and documented. Provide example template directory in repo under "templates/".
+- Keep renderer crate small and focused: no plugin system at first; accept template-based extensibility.
+- Security: when rendering untrusted metadata, ensure templates/filters escape appropriately (Tera auto-escapes for HTML when using the right context; document safety).
+- Provide CLI examples and a small binary or example app showing how to render assets with templates.
+
+Todos
+-----
+1. create-renderer-crate: Create new crate markplus_render with basic cargo layout and dependency on markplus_core + tera (native) + serde, serde_json.
+2. design-context-shape: Define the JSON/template context produced from SiteAsset (meta, ast simplified, derived fields e.g., headings list, toc, slug).
+3. implement-ast-to-context: Implement ast_to_template_context(asset) that converts AST nodes into template-friendly structures (strings, arrays, nested dicts).
+4. add-tera-html-renderer: Wire up Tera templates, load templates (builtin and from path), render HTML using context.
+5. add-tera-typst-renderer: Provide Typst templates (same templating engine) and a render path for typst output.
+6. wasm-light-renderer: Implement a small wasm-friendly renderer that converts AST→HTML without Tera for browser previews.
+7. default-templates: Add "templates/default", "templates/ieee", "templates/docs" with simple starting templates.
+8. add-helpers-and-filters: Implement common filters (date fmt, slugify, safe_html) and register with Tera.
+9. tests-renderer: Add unit tests and snapshot tests using sample SiteAsset fixtures to validate render outputs.
+10. docs-usage-renderer: Update docs/usage.md with usage examples for markplus_render, template overrides, and CLI usage.
+11. ci-add-render-tests: Add CI step that runs renderer tests and snapshot validation.
+12. crate-example-binary: Add a small example binary or example folder demonstrating render_to_file usage.
+
+Notes on immediate priorities
+----------------------------
+- MVP: items 1,2,3,4,7,9,10. That yields a working templated HTML renderer with defaults and tests.
+- Optional: wasm-light-renderer (6) can follow once the native path stabilizes.
+
+No time estimates included by request.
