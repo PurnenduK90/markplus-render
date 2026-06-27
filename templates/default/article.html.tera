@@ -104,7 +104,13 @@
       </p>
 
     {% elif node.t == "fenced" %}
-      <pre><code class="language-{{ node.name }}">{{ node.raw | safe_html }}</code></pre>
+      {% if node.name == "mermaid" and node.svg_html %}
+        <div class="mermaid-diagram" style="text-align: center; margin: 1.5em 0;">
+          {{ node.svg_html | safe_html }}
+        </div>
+      {% else %}
+        <pre><code class="language-{{ node.name }}">{{ node.raw | safe_html }}</code></pre>
+      {% endif %}
 
     {% elif node.t == "math_block" %}
       <p class="math-block" data-math="{{ node.src | safe_html }}">$${{ node.src | safe_html }}$$</p>

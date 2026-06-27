@@ -83,9 +83,15 @@
 {% for child in node.children %}{% if child.t == "text" %}{{ child.text }}{% elif child.t == "strong" %}*{% for c in child.children %}{{ c.text | default(value="") }}{% endfor %}*{% elif child.t == "em" %}_{% for c in child.children %}{{ c.text | default(value="") }}{% endfor %}_{% elif child.t == "code" %}`{{ child.text }}`{% elif child.t == "link" %}#link("{{ child.href }}")[{% for c in child.children %}{{ c.text | default(value="") }}{% endfor %}]{% elif child.t == "math_inline" %}${{ child.src }}${% elif child.t == "del" %}#strike[{% for c in child.children %}{{ c.text | default(value="") }}{% endfor %}]{% elif child.t == "hard_break" %}\ {% elif child.t == "soft_break" %} {% elif child.t == "sup" %}#super[{% for c in child.children %}{{ c.text | default(value="") }}{% endfor %}]{% elif child.t == "sub" %}#sub[{% for c in child.children %}{{ c.text | default(value="") }}{% endfor %}]{% endif %}{% endfor %}
 
 {% elif node.t == "fenced" %}
+{% if node.name == "mermaid" and node.svg_typst %}
+#align(center)[
+  #image(bytes("{{ node.svg_typst | safe }}"), format: "svg")
+]
+{% else %}
 ```{{ node.name }}
 {{ node.raw }}
 ```
+{% endif %}
 
 {% elif node.t == "math_block" %}
 $ {{ node.src }} $

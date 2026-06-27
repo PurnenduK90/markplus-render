@@ -33,15 +33,62 @@ use serde_json::{Value, json};
 /// - `slug`  — URL-safe slug derived from `meta.title` or first heading
 /// - `toc`   — array of `{ level, text, slug }` entries from headings
 /// - `body`  — the full AST node array (unchanged from the asset)
+fn process_mermaid_nodes(nodes: &mut [Value]) {
+    for node in nodes.iter_mut() {
+        if node["t"] == "fenced" && node["name"] == "mermaid" {
+            if let Some(raw) = node.get("raw").and_then(Value::as_str) {
+                match mermaid_rs_renderer::render(raw) {
+                    Ok(svg) => {
+                        let obj = node.as_object_mut().unwrap();
+                        obj.insert("svg_html".to_string(), json!(svg));
+                        let typst_svg = svg.replace('"', "\\\"").replace('\n', "");
+                        obj.insert("svg_typst".to_string(), json!(typst_svg));
+                    }
+                    Err(e) => {
+                        eprintln!("Warning: Failed to render mermaid diagram: {}", e);
+                    }
+                }
+            }
+        }
+        
+        // Recurse into children
+        if let Some(children) = node.get_mut("children").and_then(Value::as_array_mut) {
+            process_mermaid_nodes(children);
+        }
+        
+        // Recurse into items (e.g. lists)
+        if let Some(items) = node.get_mut("items").and_then(Value::as_array_mut) {
+            for item in items.iter_mut() {
+                if let Some(ch) = item.get_mut("children").and_then(Value::as_array_mut) {
+                    process_mermaid_nodes(ch);
+                }
+            }
+        }
+        
+        // Recurse into tabs
+        if let Some(tabs) = node.get_mut("tabs").and_then(Value::as_array_mut) {
+            for tab in tabs.iter_mut() {
+                if let Some(ast) = tab.get_mut("ast").and_then(Value::as_array_mut) {
+                    process_mermaid_nodes(ast);
+                }
+            }
+        }
+    }
+}
+
 pub fn ast_to_template_context(asset: &SiteAsset) -> Value {
     let toc = build_toc(&asset.ast);
     let slug = derive_slug(asset);
+    
+    // Process mermaid diagrams recursively
+    let mut body = asset.ast.clone();
+    process_mermaid_nodes(&mut body);
 
     json!({
         "meta": asset.meta,
         "slug": slug,
         "toc":  toc,
-        "body": asset.ast,
+        "body": body,
     })
 }
 
