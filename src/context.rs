@@ -7,7 +7,7 @@
 //        http://www.apache.org/licenses/LICENSE-2.0
 
 //! Converts a [`markplus_core::json::SiteAsset`] into a template-friendly
-//! [`serde_json::Value`] that Tera templates can consume directly.
+//! [`serde_json::Value`] that MiniJinja templates can consume directly.
 //!
 //! ## Context shape
 //!
@@ -33,70 +33,11 @@ use serde_json::{Value, json};
 /// - `slug`  — URL-safe slug derived from `meta.title` or first heading
 /// - `toc`   — array of `{ level, text, slug }` entries from headings
 /// - `body`  — the full AST node array (unchanged from the asset)
-fn process_mermaid_nodes(nodes: &mut [Value]) {
-    for node in nodes.iter_mut() {
-        if node["t"] == "fenced" && node["name"] == "mermaid" {
-            if let Some(raw) = node.get("raw").and_then(Value::as_str) {
-                match mermaid_rs_renderer::render(raw) {
-                    Ok(svg) => {
-                        let obj = node.as_object_mut().unwrap();
-                        obj.insert("svg_html".to_string(), json!(svg));
-                        let typst_svg = svg.replace('"', "\\\"").replace('\n', "");
-                        obj.insert("svg_typst".to_string(), json!(typst_svg));
-                    }
-                    Err(e) => {
-                        eprintln!("Warning: Failed to render mermaid diagram: {}", e);
-                    }
-                }
-            }
-        }
-        
-        // Recurse into children
-        if let Some(children) = node.get_mut("children").and_then(Value::as_array_mut) {
-            process_mermaid_nodes(children);
-        }
-        
-        // Recurse into items (e.g. lists)
-        if let Some(items) = node.get_mut("items").and_then(Value::as_array_mut) {
-            for item in items.iter_mut() {
-                if let Some(ch) = item.get_mut("children").and_then(Value::as_array_mut) {
-                    process_mermaid_nodes(ch);
-                }
-            }
-        }
-        
-        // Recurse into tabs
-        if let Some(tabs) = node.get_mut("tabs").and_then(Value::as_array_mut) {
-            for tab in tabs.iter_mut() {
-                if let Some(ast) = tab.get_mut("ast").and_then(Value::as_array_mut) {
-                    process_mermaid_nodes(ast);
-                }
-            }
-        }
-    }
-}
-
-pub fn ast_to_template_context(asset: &SiteAsset) -> Value {
-    let toc = build_toc(&asset.ast);
-    let slug = derive_slug(asset);
-    
-    // Process mermaid diagrams recursively
-    let mut body = asset.ast.clone();
-    process_mermaid_nodes(&mut body);
-
-    json!({
-        "meta": asset.meta,
-        "slug": slug,
-        "toc":  toc,
-        "body": body,
-    })
-}
-
 // ---------------------------------------------------------------------------
 // TOC extraction
 // ---------------------------------------------------------------------------
 
-fn build_toc(ast: &[Value]) -> Vec<Value> {
+pub fn build_toc(ast: &[Value]) -> Vec<Value> {
     let mut toc = Vec::new();
     collect_headings(ast, &mut toc);
     toc
@@ -176,49 +117,9 @@ pub fn slugify_text(s: &str) -> String {
 }
 
 // ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use markplus_core::parse_document;
-
-    const DOC: &str = "---\ntitle: Hello World\ntags:\n  - rust\n---\n# Hello World\n\nSome text.\n\n## Sub-section\n\nMore text.\n";
-
-    #[test]
-    fn context_has_meta_slug_toc_body() {
-        let asset = parse_document(DOC).unwrap();
-        let ctx = ast_to_template_context(&asset);
-        assert_eq!(ctx["meta"]["title"], "Hello World");
-        assert_eq!(ctx["slug"], "hello-world");
-        assert_eq!(ctx["toc"].as_array().unwrap().len(), 2);
-        assert!(!ctx["body"].as_array().unwrap().is_empty());
-    }
-
-    #[test]
-    fn toc_entries_have_level_text_slug() {
-        let asset = parse_document(DOC).unwrap();
-        let ctx = ast_to_template_context(&asset);
-        let first = &ctx["toc"][0];
-        assert_eq!(first["level"], 1);
-        assert_eq!(first["text"], "Hello World");
-        assert_eq!(first["slug"], "hello-world");
-    }
-
-    #[test]
-    fn slug_falls_back_to_first_heading() {
-        let asset = parse_document("# My Heading\n\nBody.\n").unwrap();
-        let ctx = ast_to_template_context(&asset);
-        assert_eq!(ctx["slug"], "my-heading");
-    }
-
-    #[test]
-    fn slug_defaults_to_document_when_empty() {
-        let asset = parse_document("Just a paragraph.\n").unwrap();
-        let ctx = ast_to_template_context(&asset);
-        assert_eq!(ctx["slug"], "document");
-    }
 
     #[test]
     fn slugify_handles_special_chars() {

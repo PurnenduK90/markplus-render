@@ -13,8 +13,8 @@ use std::fmt;
 /// All errors that can occur during rendering or PDF compilation.
 #[derive(Debug)]
 pub enum RenderError {
-    /// Tera template rendering failed.
-    TeraRender(String),
+    /// Template rendering failed.
+    TemplateRender(String),
     /// Typst compilation failed (native or wasm).
     TypstCompile(String),
     /// File I/O error (native only).
@@ -26,19 +26,19 @@ pub enum RenderError {
 impl fmt::Display for RenderError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::TeraRender(msg)      => write!(f, "template render error: {msg}"),
-            Self::TypstCompile(msg)    => write!(f, "typst compile error: {msg}"),
-            Self::Io(msg)              => write!(f, "io error: {msg}"),
-            Self::InvalidContext(msg)  => write!(f, "invalid context: {msg}"),
+            Self::TemplateRender(msg) => write!(f, "template render error: {msg}"),
+            Self::TypstCompile(msg) => write!(f, "typst compile error: {msg}"),
+            Self::Io(msg) => write!(f, "io error: {msg}"),
+            Self::InvalidContext(msg) => write!(f, "invalid context: {msg}"),
         }
     }
 }
 
 impl std::error::Error for RenderError {}
 
-impl From<tera::Error> for RenderError {
-    fn from(e: tera::Error) -> Self {
-        Self::TeraRender(e.to_string())
+impl From<minijinja::Error> for RenderError {
+    fn from(e: minijinja::Error) -> Self {
+        Self::TemplateRender(e.to_string())
     }
 }
 

@@ -6,59 +6,63 @@
 //
 //        http://www.apache.org/licenses/LICENSE-2.0
 
-//! Core rendering methods on [`RenderEngine`].
-//!
-//! - [`RenderEngine::render_html`]          — AST → HTML string via Tera
-//! - [`RenderEngine::render_typst_string`]  — AST → Typst source string via Tera
-//! - [`RenderEngine::compile_pdf`]          — Typst source → PDF bytes
-//!   - Native: `typst-as-lib` + system fonts
-//!   - Wasm:   `WasmWorld` + embedded Liberation fonts
-//! - [`RenderEngine::render_to_file`]       — convenience wrapper (native only)
-
 use markplus_core::json::SiteAsset;
+use serde_json::json;
 
-use crate::context::ast_to_template_context;
 use crate::engine::RenderEngine;
 use crate::error::RenderError;
 
 impl RenderEngine {
-    /// Render HTML from a [`SiteAsset`] using the named Tera template.
-    ///
-    /// `template_name` must match a template loaded at engine construction,
-    /// e.g. `"default/article.html.tera"`.
     pub fn render_html(
         &self,
         asset: &SiteAsset,
         template_name: &str,
     ) -> Result<String, RenderError> {
-        let ctx_val = ast_to_template_context(asset);
-        let ctx = tera::Context::from_value(ctx_val)?;
-        self.tera.render(template_name, &ctx).map_err(RenderError::from)
+        let mut html_body = String::new();
+        for node in &asset.ast {
+            crate::blocks::render_html_node(node, &mut html_body);
+        }
+
+        let ctx = json!({
+            "meta": asset.meta,
+            "toc": crate::context::build_toc(&asset.ast),
+            "body": html_body,
+        });
+
+        let tmpl = self
+            .env
+            .get_template(template_name)
+            .map_err(|e| RenderError::TemplateRender(e.to_string()))?;
+
+        tmpl.render(ctx)
+            .map_err(|e| RenderError::TemplateRender(e.to_string()))
     }
 
-    /// Render a Typst source string from a [`SiteAsset`] using the named template.
-    ///
-    /// The returned string is valid `.typ` source that can be:
-    /// - Written to disk and compiled with `typst compile out.typ out.pdf`
-    /// - Passed directly to [`Self::compile_pdf`] for in-process compilation
     pub fn render_typst_string(
         &self,
         asset: &SiteAsset,
         template_name: &str,
     ) -> Result<String, RenderError> {
-        let ctx_val = ast_to_template_context(asset);
-        let ctx = tera::Context::from_value(ctx_val)?;
-        self.tera.render(template_name, &ctx).map_err(RenderError::from)
+        let mut typst_body = String::new();
+        for node in &asset.ast {
+            crate::blocks::render_typst_node(node, &mut typst_body);
+        }
+
+        let ctx = json!({
+            "meta": asset.meta,
+            "toc": crate::context::build_toc(&asset.ast),
+            "body": typst_body,
+        });
+
+        let tmpl = self
+            .env
+            .get_template(template_name)
+            .map_err(|e| RenderError::TemplateRender(e.to_string()))?;
+
+        tmpl.render(ctx)
+            .map_err(|e| RenderError::TemplateRender(e.to_string()))
     }
 
-    // -----------------------------------------------------------------------
-    // PDF compilation — native path
-    // -----------------------------------------------------------------------
-
-    /// Compile a Typst source string into PDF bytes.
-    ///
-    /// **Native**: uses `typst-as-lib` with system / bundled font discovery.
-    /// **Wasm**: uses [`crate::wasm_world::WasmWorld`] with embedded Liberation fonts.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn compile_pdf(&self, typst_src: &str) -> Result<Vec<u8>, RenderError> {
         use typst::diag::Warned;
@@ -91,52 +95,6 @@ impl RenderEngine {
             .map_err(|e| RenderError::TypstCompile(format!("{:?}", e)))
     }
 
-    // -----------------------------------------------------------------------
-    // PDF compilation — wasm path
-    // -----------------------------------------------------------------------
-
-    /// Compile a Typst source string into PDF bytes (wasm target).
-    ///
-    /// Uses [`crate::wasm_world::WasmWorld`] which embeds Liberation fonts so
-    /// no filesystem access is required.
-    #[cfg(target_arch = "wasm32")]
-    pub fn compile_pdf(&self, typst_src: &str) -> Result<Vec<u8>, RenderError> {
-        use crate::wasm_world::WasmWorld;
-        use typst::layout::PagedDocument;
-
-        let world = WasmWorld::new(typst_src.to_string());
-        let warned = typst::compile(&world);
-
-        let document: PagedDocument = warned.output.map_err(|errors| {
-            let msg = errors
-                .into_iter()
-                .map(|e| format!("{:?}", e))
-                .collect::<Vec<_>>()
-                .join("\n");
-            RenderError::TypstCompile(msg)
-        })?;
-
-        if document.pages.is_empty() {
-            return Err(RenderError::TypstCompile("document has no pages".into()));
-        }
-
-        let options = typst_pdf::PdfOptions::default();
-        typst_pdf::pdf(&document, &options)
-            .map_err(|e| RenderError::TypstCompile(format!("{:?}", e)))
-    }
-
-    // -----------------------------------------------------------------------
-    // render_to_file — native convenience
-    // -----------------------------------------------------------------------
-
-    /// Render a document to a file on disk.
-    ///
-    /// The output format is determined by the file extension of `dest`:
-    /// - `.html` — renders HTML template and writes the string
-    /// - `.typ`  — renders Typst template and writes the source string
-    /// - `.pdf`  — renders Typst template then compiles to PDF bytes
-    ///
-    /// Only available on native targets.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn render_to_file(
         &self,

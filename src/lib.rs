@@ -17,8 +17,8 @@
 //! Renderer for the MarkPlus ecosystem. Consumes a [`markplus_core::json::SiteAsset`]
 //! (schema + meta + AST) and produces:
 //!
-//! - **HTML** — via Tera template (`*.html.tera`)
-//! - **Typst source** — via Tera template (`*.typ.tera`); compile with `typst compile`
+//! - **HTML** — via MiniJinja template (`*.html.jinja`)
+//! - **Typst source** — via MiniJinja template (`*.typ.jinja`); compile with `typst compile`
 //! - **PDF bytes** — Typst source compiled in-process:
 //!   - Native: `typst-as-lib` + system font discovery
 //!   - Wasm (`--features wasm`): embedded `WasmWorld` + Liberation fonts (~30 MB bundle)
@@ -31,23 +31,31 @@
 //!
 //! let asset = parse_document("# Hello\n\nWorld.")?;
 //! let engine = RenderEngine::builder().build()?;
-//! let html = engine.render_html(&asset, "default/article.html.tera")?;
-//! let typ_src = engine.render_typst_string(&asset, "default/article.typ.tera")?;
+//! let html = engine.render_html(&asset, "default/article.html.jinja")?;
+//! let typ_src = engine.render_typst_string(&asset, "default/article.typ.jinja")?;
 //! let pdf_bytes = engine.compile_pdf(&typ_src)?;
 //! ```
 
-pub mod context;
-pub mod engine;
-pub mod error;
-pub mod filters;
-pub mod render;
+pub mod blocks;
 
-#[cfg(target_arch = "wasm32")]
-pub mod wasm_world;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod context;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod engine;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod error;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod filters;
+pub mod plugin;
+pub mod postprocess;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod render;
 
 #[cfg(feature = "wasm")]
 pub mod wasm;
 
-pub use context::ast_to_template_context;
+#[cfg(not(target_arch = "wasm32"))]
 pub use engine::{RenderEngine, RenderEngineBuilder};
+#[cfg(not(target_arch = "wasm32"))]
 pub use error::RenderError;
+pub use postprocess::{ImagePathRewriter, PostProcessPipeline, PostProcessor};

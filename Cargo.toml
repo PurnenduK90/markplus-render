@@ -1,6 +1,9 @@
+[workspace]
+members = ["plugins/*"]
+
 [package]
 name = "markplus_render"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 license = "Apache-2.0"
 description = "HTML and PDF renderer for the MarkPlus ecosystem (AST → HTML / Typst → PDF)"
@@ -16,10 +19,9 @@ crate-type = ["cdylib", "rlib"]
 # Core dependencies — always present
 # ---------------------------------------------------------------------------
 [dependencies]
-markplus_core = { version = "1.0.0" }
+markplus_core = { version = "1.2.0" }
 serde         = { version = "1.0", features = ["derive"] }
 serde_json    = "1.0"
-tera          = "1.20"
 anyhow        = "1.0"
 
 # ---------------------------------------------------------------------------
@@ -29,7 +31,7 @@ wasm-bindgen             = { version = "0.2", optional = true }
 web-sys                  = { version = "0.3", features = ["console"], optional = true }
 serde-wasm-bindgen       = { version = "0.6", optional = true }
 console_error_panic_hook = { version = "0.1", optional = true }
-mermaid-rs-renderer = { version = "0.2.2", default-features = false }
+html-escape = "0.2.14"
 
 # ---------------------------------------------------------------------------
 # Native-only: full Typst engine with font discovery
@@ -39,18 +41,10 @@ typst        = "0.14"
 typst-as-lib = { version = "0.15", features = ["packages", "reqwest", "typst-kit-fonts"] }
 typst-pdf    = "0.14"
 typst-kit    = { version = "0.14", features = ["fonts"] }
+minijinja    = { version = "2", features = ["loader", "builtins"] }
+glob         = "0.3.3"
 
-# ---------------------------------------------------------------------------
-# Wasm-only: minimal Typst engine + embedded fonts; typst-kit excluded
-# (typst-kit pulls in native-tls / openssl which cannot compile to wasm)
-# ---------------------------------------------------------------------------
-[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
-typst        = "0.14"
-typst-as-lib = { version = "0.15" }
-typst-pdf    = "0.14"
-getrandom    = { version = "0.3", features = ["wasm_js"] }
-wasm-bindgen = "0.2"
-js-sys       = "0.3"
+
 
 # ---------------------------------------------------------------------------
 # Features

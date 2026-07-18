@@ -29,10 +29,10 @@ Notes and considerations
 
 Todos
 -----
-1. create-renderer-crate: Create new crate markplus_render with basic cargo layout and dependency on markplus_core + tera (native) + serde, serde_json.
+1. create-renderer-crate: Create new crate markplus_render with basic cargo layout and dependency on markplus_core + minijinja + serde, serde_json.
 2. design-context-shape: Define the JSON/template context produced from SiteAsset (meta, ast simplified, derived fields e.g., headings list, toc, slug).
 3. implement-ast-to-context: Implement ast_to_template_context(asset) that converts AST nodes into template-friendly structures (strings, arrays, nested dicts).
-4. add-tera-html-renderer: Wire up Tera templates, load templates (builtin and from path), render HTML using context.
+4. add-tera-html-renderer: Wire up MiniJinja templates, load templates (builtin and from path), render HTML using context.
 5. add-tera-typst-renderer: Provide Typst templates (same templating engine) and a render path for typst output.
 6. wasm-light-renderer: Implement a small wasm-friendly renderer that converts AST→HTML without Tera for browser previews.
 7. default-templates: Add "templates/default", "templates/ieee", "templates/docs" with simple starting templates.

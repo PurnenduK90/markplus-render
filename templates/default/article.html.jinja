@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if meta and meta.title %}{{ meta.title | safe_html }}{% else %}Document{% endif %}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: "Liberation Serif", Georgia, serif;
+      font-size: 1rem; line-height: 1.7;
+      max-width: 780px; margin: 0 auto; padding: 2rem 1.5rem;
+      color: #222;
+    }
+    h1, h2, h3, h4, h5, h6 { font-family: "Liberation Sans", Arial, sans-serif; color: #1a1a2e; margin: 1.5em 0 0.4em; }
+    h1 { font-size: 2rem; border-bottom: 2px solid #e0e0e0; padding-bottom: 0.3em; }
+    h2 { font-size: 1.5rem; border-bottom: 1px solid #ececec; padding-bottom: 0.2em; }
+    h3 { font-size: 1.25rem; }
+    p { margin: 0.8em 0; }
+    a { color: #1565c0; }
+    code { font-family: "Liberation Mono", monospace; background: #f4f4f4; padding: 0.1em 0.35em; border-radius: 3px; font-size: 0.88em; }
+    pre { background: #f8f8f8; border: 1px solid #ddd; border-radius: 4px; padding: 1rem; overflow-x: auto; }
+    pre code { background: none; padding: 0; font-size: 0.85em; }
+    blockquote { border-left: 4px solid #ccc; margin: 1em 0; padding: 0.5em 1em; color: #555; background: #fafafa; }
+    blockquote.note    { border-color: #2196f3; background: #e3f2fd; }
+    blockquote.warning { border-color: #ff9800; background: #fff3e0; }
+    blockquote.tip     { border-color: #4caf50; background: #e8f5e9; }
+    blockquote.caution { border-color: #f44336; background: #fce4ec; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+    th, td { border: 1px solid #ddd; padding: 0.5em 0.75em; text-align: left; }
+    th { background: #f0f0f0; font-weight: 600; }
+    tr:nth-child(even) td { background: #fafafa; }
+    .math-block { font-style: italic; text-align: center; margin: 1em 0; }
+    .math-inline { font-style: italic; }
+    .toc { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 4px; padding: 1em 1.5em; margin-bottom: 2em; }
+    .toc h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0; }
+    .toc ul { margin: 0; padding-left: 1.2em; }
+    .toc li { margin: 0.2em 0; }
+    .toc a { text-decoration: none; color: #333; }
+    .toc a:hover { text-decoration: underline; }
+    .toc .level-2 { margin-left: 1em; }
+    .toc .level-3 { margin-left: 2em; }
+    .tags { margin-bottom: 1.5em; }
+    .tag { display: inline-block; background: #e8eaf6; color: #3f51b5; border-radius: 3px; padding: 0.1em 0.5em; font-size: 0.8em; margin-right: 0.3em; }
+    hr { border: none; border-top: 1px solid #ddd; margin: 2em 0; }
+    img { max-width: 100%; height: auto; }
+    .footnote-def { font-size: 0.85em; color: #555; border-top: 1px solid #eee; margin-top: 2em; padding-top: 0.5em; }
+    sup { font-size: 0.75em; }
+  </style>
+</head>
+<body>
+
+<article>
+  {% if meta %}
+  <header>
+    {% if meta.title %}<h1>{{ meta.title | safe_html }}</h1>{% endif %}
+    {% if meta.date %}<p class="date"><time>{{ meta.date | date_fmt }}</time></p>{% endif %}
+    {% if meta.tags %}
+    <div class="tags">
+      {% for tag in meta.tags %}<span class="tag">{{ tag | safe_html }}</span>{% endfor %}
+    </div>
+    {% endif %}
+  </header>
+  {% endif %}
+
+  {% if toc and toc | length > 1 %}
+  <nav class="toc">
+    <h2>Contents</h2>
+    <ul>
+      {% for entry in toc %}
+      <li class="level-{{ entry.level }}">
+        <a href="#{{ entry.slug }}">{{ entry.text | safe_html }}</a>
+      </li>
+      {% endfor %}
+    </ul>
+  </nav>
+  {% endif %}
+
+  {{ body | safe }}
+
+</article>
+
+</body>
+</html>

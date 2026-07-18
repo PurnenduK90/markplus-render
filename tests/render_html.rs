@@ -3,23 +3,26 @@
 
 //! Integration tests for HTML rendering.
 
-use std::collections::HashMap;
 use markplus_core::parse_document;
 use markplus_render::RenderEngine;
+use std::collections::HashMap;
 
-const TEMPLATE: &str = include_str!("../templates/default/article.html.tera");
+const TEMPLATE: &str = include_str!("../templates/default/article.html.jinja");
 
 fn engine() -> RenderEngine {
     RenderEngine::builder()
-        .build_with_templates(HashMap::from([
-            ("default/article.html.tera".into(), TEMPLATE.into()),
-        ]))
+        .build_with_templates(HashMap::from([(
+            "default/article.html.jinja".into(),
+            TEMPLATE.into(),
+        )]))
         .expect("engine build failed")
 }
 
 fn render(md: &str) -> String {
     let asset = parse_document(md).expect("parse failed");
-    engine().render_html(&asset, "default/article.html.tera").expect("render failed")
+    engine()
+        .render_html(&asset, "default/article.html.jinja")
+        .expect("render failed")
 }
 
 // ---------------------------------------------------------------------------
@@ -118,7 +121,11 @@ fn html_blockquote() {
 #[test]
 fn html_gfm_note_alert() {
     let out = render("> [!NOTE]\n> This is a note.\n");
-    assert!(out.contains("class=\"note\"") || out.contains("<blockquote"), "{}", out);
+    assert!(
+        out.contains("class=\"note\"") || out.contains("<blockquote"),
+        "{}",
+        out
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -173,6 +180,6 @@ fn html_toc_appears_for_multiple_headings() {
 
 #[test]
 fn html_hr() {
-    let out = render("---\n\ntext\n\n---\n");
+    let out = render("Hello\n\n---\n\ntext\n\n---\n");
     assert!(out.contains("<hr>"), "{}", out);
 }

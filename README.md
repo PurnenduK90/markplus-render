@@ -6,8 +6,8 @@ Consumes a `SiteAsset` (schema + frontmatter + AST) produced by `markplus_core` 
 
 | Target | How |
 |---|---|
-| **HTML** | AST → Tera `*.html.tera` template → `.html` string |
-| **Typst source** | AST → Tera `*.typ.tera` template → `.typ` string |
+| **HTML** | AST → Tera `*.html.jinja` template → `.html` string |
+| **Typst source** | AST → Tera `*.typ.jinja` template → `.typ` string |
 | **PDF (native)** | Typst source → `typst-as-lib` → PDF bytes |
 | **PDF (wasm)** | Typst source → embedded `WasmWorld` → PDF bytes (`--features wasm`, ~30 MB) |
 
@@ -20,8 +20,8 @@ use markplus_render::RenderEngine;
 let asset = parse_document("# Hello\n\n**World.**")?;
 let engine = RenderEngine::builder().build()?; // loads templates/ dir
 
-let html      = engine.render_html(&asset, "default/article.html.tera")?;
-let typst_src = engine.render_typst_string(&asset, "default/article.typ.tera")?;
+let html      = engine.render_html(&asset, "default/article.html.jinja")?;
+let typst_src = engine.render_typst_string(&asset, "default/article.typ.jinja")?;
 let pdf_bytes = engine.compile_pdf(&typst_src)?;
 ```
 
@@ -39,8 +39,8 @@ Default templates live in `templates/default/`:
 ```
 templates/
 └── default/
-    ├── article.html.tera   ← HTML article
-    └── article.typ.tera    ← Typst article (→ PDF)
+    ├── article.html.jinja   ← HTML article
+    └── article.typ.jinja    ← Typst article (→ PDF)
 ```
 
 Override at runtime:

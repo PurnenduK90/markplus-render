@@ -3,24 +3,25 @@
 
 //! Integration tests for Typst source rendering.
 
-use std::collections::HashMap;
 use markplus_core::parse_document;
 use markplus_render::RenderEngine;
+use std::collections::HashMap;
 
-const TEMPLATE: &str = include_str!("../templates/default/article.typ.tera");
+const TEMPLATE: &str = include_str!("../templates/default/article.typ.jinja");
 
 fn engine() -> RenderEngine {
     RenderEngine::builder()
-        .build_with_templates(HashMap::from([
-            ("default/article.typ.tera".into(), TEMPLATE.into()),
-        ]))
+        .build_with_templates(HashMap::from([(
+            "default/article.typ.jinja".into(),
+            TEMPLATE.into(),
+        )]))
         .expect("engine build failed")
 }
 
 fn render_typ(md: &str) -> String {
     let asset = parse_document(md).expect("parse failed");
     engine()
-        .render_typst_string(&asset, "default/article.typ.tera")
+        .render_typst_string(&asset, "default/article.typ.jinja")
         .expect("render failed")
 }
 
@@ -31,7 +32,11 @@ fn render_typ(md: &str) -> String {
 #[test]
 fn typst_h1_uses_equals_sign() {
     let out = render_typ("# My Title\n");
-    assert!(out.contains("= My Title"), "expected '= My Title' in:\n{}", out);
+    assert!(
+        out.contains("= My Title"),
+        "expected '= My Title' in:\n{}",
+        out
+    );
 }
 
 #[test]
@@ -158,4 +163,3 @@ fn typst_output_sets_page() {
     let out = render_typ("# Hello\n");
     assert!(out.contains("#set page("), "{}", out);
 }
-

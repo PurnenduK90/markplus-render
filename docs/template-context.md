@@ -1,6 +1,6 @@
 # markplus_render — Template Context Reference
 
-Every Tera template receives a single context object. This document describes
+Every MiniJinja template receives a single context object. This document describes
 every field available, its type, and when it is present.
 
 ## Top-level shape

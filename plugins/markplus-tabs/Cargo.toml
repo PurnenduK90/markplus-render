@@ -1,0 +1,8 @@
+[package]
+name = "markplus-tabs"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+markplus_render = { path = "../.." }
+serde_json = "1.0"

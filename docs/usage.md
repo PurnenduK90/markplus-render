@@ -34,11 +34,11 @@ SiteAsset { schema, meta, ast }
      │
      ├──── render_html()  ─────────────────► HTML string (.html)
      │         │
-     │    Tera template (*.html.tera)
+     │    MiniJinja template (*.html.jinja)
      │
      ├──── render_typst_string()  ─────────► Typst source (.typ)
      │         │                                    │
-     │    Tera template (*.typ.tera)          typst compile
+     │    MiniJinja template (*.typ.jinja)          typst compile
      │                                              │
      │                                             PDF
      │
@@ -74,11 +74,11 @@ fn main() -> anyhow::Result<()> {
     let engine = RenderEngine::builder().build()?;   // loads templates/ dir
 
     // HTML
-    let html = engine.render_html(&asset, "default/article.html.tera")?;
+    let html = engine.render_html(&asset, "default/article.html.jinja")?;
     std::fs::write("my_note.html", html)?;
 
     // Typst → PDF
-    let typ_src = engine.render_typst_string(&asset, "default/article.typ.tera")?;
+    let typ_src = engine.render_typst_string(&asset, "default/article.typ.jinja")?;
     let pdf = engine.compile_pdf(&typ_src)?;
     std::fs::write("my_note.pdf", pdf)?;
 
@@ -91,9 +91,9 @@ Or with the single-call convenience method:
 ```rust
 use std::path::Path;
 
-engine.render_to_file(&asset, "default/article.html.tera", Path::new("out.html"))?;
-engine.render_to_file(&asset, "default/article.typ.tera",  Path::new("out.typ"))?;
-engine.render_to_file(&asset, "default/article.typ.tera",  Path::new("out.pdf"))?;
+engine.render_to_file(&asset, "default/article.html.jinja", Path::new("out.html"))?;
+engine.render_to_file(&asset, "default/article.typ.jinja",  Path::new("out.typ"))?;
+engine.render_to_file(&asset, "default/article.typ.jinja",  Path::new("out.pdf"))?;
 // .pdf extension automatically compiles Typst → PDF
 ```
 
@@ -117,7 +117,7 @@ let engine = RenderEngine::builder()
 ```
 
 Template names are relative to the templates root, e.g.
-`"default/article.html.tera"`.
+`"default/article.html.jinja"`.
 
 ### From in-memory strings (wasm / testing)
 
@@ -125,13 +125,13 @@ Template names are relative to the templates root, e.g.
 use std::collections::HashMap;
 use markplus_render::RenderEngine;
 
-let html_tpl = include_str!("templates/default/article.html.tera");
-let typ_tpl  = include_str!("templates/default/article.typ.tera");
+let html_tpl = include_str!("templates/default/article.html.jinja");
+let typ_tpl  = include_str!("templates/default/article.typ.jinja");
 
 let engine = RenderEngine::builder()
     .build_with_templates(HashMap::from([
-        ("default/article.html.tera".into(), html_tpl.into()),
-        ("default/article.typ.tera".into(),  typ_tpl.into()),
+        ("default/article.html.jinja".into(), html_tpl.into()),
+        ("default/article.typ.jinja".into(),  typ_tpl.into()),
     ]))?;
 ```
 
@@ -140,7 +140,7 @@ let engine = RenderEngine::builder()
 ## 4. Rendering HTML
 
 ```rust
-let html: String = engine.render_html(&asset, "default/article.html.tera")?;
+let html: String = engine.render_html(&asset, "default/article.html.jinja")?;
 ```
 
 The returned string is a complete `<!DOCTYPE html>` document. It includes:
@@ -157,10 +157,10 @@ To use a custom template, register it at engine build time and pass its name:
 ```rust
 let engine = RenderEngine::builder()
     .build_with_templates(HashMap::from([
-        ("blog/post.html.tera".into(), MY_TEMPLATE.into()),
+        ("blog/post.html.jinja".into(), MY_TEMPLATE.into()),
     ]))?;
 
-let html = engine.render_html(&asset, "blog/post.html.tera")?;
+let html = engine.render_html(&asset, "blog/post.html.jinja")?;
 ```
 
 ---
@@ -168,7 +168,7 @@ let html = engine.render_html(&asset, "blog/post.html.tera")?;
 ## 5. Rendering Typst source
 
 ```rust
-let typ_src: String = engine.render_typst_string(&asset, "default/article.typ.tera")?;
+let typ_src: String = engine.render_typst_string(&asset, "default/article.typ.jinja")?;
 ```
 
 The returned string is valid Typst markup that can be:
@@ -245,13 +245,13 @@ use markplus_render::RenderEngine;
 let engine = RenderEngine::builder().build()?;
 
 // Write HTML
-engine.render_to_file(&asset, "default/article.html.tera", Path::new("doc.html"))?;
+engine.render_to_file(&asset, "default/article.html.jinja", Path::new("doc.html"))?;
 
 // Write Typst source
-engine.render_to_file(&asset, "default/article.typ.tera",  Path::new("doc.typ"))?;
+engine.render_to_file(&asset, "default/article.typ.jinja",  Path::new("doc.typ"))?;
 
 // Render Typst then compile → PDF in one call
-engine.render_to_file(&asset, "default/article.typ.tera",  Path::new("doc.pdf"))?;
+engine.render_to_file(&asset, "default/article.typ.jinja",  Path::new("doc.pdf"))?;
 ```
 
 | Extension | Action |
@@ -271,11 +271,11 @@ Templates use [Tera](https://keats.github.io/tera/) syntax (Jinja2-like).
 ```
 templates/
 └── <theme>/
-    ├── <doctype>.html.tera   — HTML output
-    └── <doctype>.typ.tera    — Typst source output
+    ├── <doctype>.html.jinja   — HTML output
+    └── <doctype>.typ.jinja    — Typst source output
 ```
 
-Example: `templates/default/article.html.tera`
+Example: `templates/default/article.html.jinja`
 
 ### Context shape
 
@@ -302,15 +302,15 @@ Every template receives the same context object — see
 
 | Template name | Description |
 |---|---|
-| `default/article.html.tera` | HTML article with TOC, meta header, all node types |
-| `default/article.typ.tera`  | Typst article → PDF with numbered headings, A4 page |
+| `default/article.html.jinja` | HTML article with TOC, meta header, all node types |
+| `default/article.typ.jinja`  | Typst article → PDF with numbered headings, A4 page |
 
 ### Creating a custom template
 
-1. Create `templates/blog/post.html.tera`
+1. Create `templates/blog/post.html.jinja`
 2. Use the same `meta`, `toc`, `body` variables (see [context reference](./template-context.md))
 3. Load it at engine build time or place it in the templates directory
-4. Call `engine.render_html(&asset, "blog/post.html.tera")`
+4. Call `engine.render_html(&asset, "blog/post.html.jinja")`
 
 ---
 
@@ -377,22 +377,22 @@ import init, { MarkplusRenderWasm } from "./pkg/markplus_render.js";
 await init();
 
 // 1. Load templates (fetch or embed as strings)
-const htmlTpl = await fetch("/templates/default/article.html.tera").then(r => r.text());
-const typTpl  = await fetch("/templates/default/article.typ.tera").then(r => r.text());
+const htmlTpl = await fetch("/templates/default/article.html.jinja").then(r => r.text());
+const typTpl  = await fetch("/templates/default/article.typ.jinja").then(r => r.text());
 
 // 2. Create renderer with template map
 const renderer = new MarkplusRenderWasm({
-    "default/article.html.tera": htmlTpl,
-    "default/article.typ.tera":  typTpl,
+    "default/article.html.jinja": htmlTpl,
+    "default/article.typ.jinja":  typTpl,
 });
 
 // 3. Render HTML preview (fast, no PDF)
 const asset = JSON.parse(markplusCore.parse_document_to_json(rawMarkdown));
-const html = renderer.render_html(asset, "default/article.html.tera");
+const html = renderer.render_html(asset, "default/article.html.jinja");
 document.getElementById("preview").innerHTML = html;
 
 // 4. Render + compile PDF (requires wasm feature, ~30 MB bundle)
-const pdfBytes = renderer.compile_pdf_from_asset(asset, "default/article.typ.tera");
+const pdfBytes = renderer.compile_pdf_from_asset(asset, "default/article.typ.jinja");
 const blob = new Blob([pdfBytes], { type: "application/pdf" });
 window.open(URL.createObjectURL(blob));
 ```
@@ -461,7 +461,7 @@ All render methods return `Result<_, RenderError>`.
 ```rust
 use markplus_render::RenderError;
 
-match engine.render_html(&asset, "default/article.html.tera") {
+match engine.render_html(&asset, "default/article.html.jinja") {
     Ok(html) => { /* use html */ }
     Err(RenderError::TeraRender(msg))     => eprintln!("template error: {msg}"),
     Err(RenderError::TypstCompile(msg))   => eprintln!("typst compile error: {msg}"),
@@ -521,10 +521,10 @@ markplus_render (wasm) → render_html_simple()  [instant, no template]
 mpc note.md > note.json
 
 # Step 2: render HTML (using a separate CLI tool or script that calls markplus_render)
-render-cli --input note.json --template default/article.html.tera --output note.html
+render-cli --input note.json --template default/article.html.jinja --output note.html
 
 # Step 3: render PDF
-render-cli --input note.json --template default/article.typ.tera --output note.pdf
+render-cli --input note.json --template default/article.typ.jinja --output note.pdf
 # (render-cli calls compile_pdf() internally)
 ```
 
